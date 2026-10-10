@@ -1,77 +1,117 @@
-# Demo plan — WhitHack, Friday October 10, 2026, 9:30 AM Pacific
+# Demo plan — WhitHack, Saturday October 10, 2026, 9:30 AM Pacific
 
-Goal: show one complete coaching loop in two minutes, live with Gemini, with a backup
-that is honest about what it is.
+What you say is in [pitch.md](pitch.md). This page is what you click, and what to do if
+something breaks.
 
-The live path makes **three Gemini calls**: questions, first feedback, retry feedback.
-Each typically takes 2–6 s in testing. Fill each wait with the line in the script.
+The live path makes **three Gemini calls** (questions, first feedback, retry feedback). On
+the evening of October 9 they each took about 1.5–2 s.
 
-## Two-minute script
+## Demo data (built into the app)
 
-| Time | Do | Say |
-| --- | --- | --- |
-| 0:00 | Setup screen is already open. | “Having project experience and explaining it in an interview are different skills. A student says ‘we built an API’, and the interviewer still doesn’t know what *they* did.” |
-| 0:12 | **Load an example** → **Start practicing**. | “I paste a resume and a job description. This is a fictional student. Gemini picks three questions…” |
-| 0:22 | Point at **Why this question?** (sidebar). | “…and every question shows the exact resume line and job requirement it comes from.” |
-| 0:32 | **Use example text** → **Reflect my answer**. | “Here’s a deliberately vague answer: ‘We built an API… it worked pretty well.’” (wait ~3 s) |
-| 0:42 | Scroll the four observations. Stop on **Your contribution**. | “No mystery score. Four observations, and each one points to the exact words behind it. Here it quotes ‘We built an API’ — my role is missing.” |
-| 0:58 | Point at the green **One follow-up** box. | “It asks one follow-up aimed at the biggest gap, and says why. It never writes the answer for me or invents achievements.” |
-| 1:08 | **Try the original again** → **Use example text** → **Reflect my answer**. | “Now I retry the same question with my part, one decision and why, and what my tests caught.” (wait ~3 s) |
-| 1:20 | Scroll to **See what changed.** | “Before and after, side by side, with the evidence highlighted and the criterion changes.” (Usually 3–4 criteria improve. If one stays at “Needs a closer look”, say: “It still wants more on the result — a retry can improve, stay the same, or reveal another gap.”) |
-| 1:32 | Stay on the comparison. | “The hard part was making AI feedback inspectable. The server checks every quote is an exact passage from the answer or resume and rejects anything else. That proves the words exist, not that a claim is true — this is coaching, not an assessment. If Gemini is busy, it retries on a fallback model.” |
-| 1:50 | **Finish & see takeaways**. | “I keep the takeaways for my next session. This demo used live Gemini.” |
+Use **Load an example** and **Use example text**. Everything is fictional and consistent:
 
-Optional, only if the room is quiet and time allows (~15 s): on the follow-up screen,
-click **Speak your answer**, say one sentence, stop, and show that the transcript lands
-in an editable box. Do not make the main path depend on the microphone.
+- **Resume:** Alex Morgan, Campus Events API (FastAPI, API-key authentication, SQLite
+  chosen for a single-server prototype, tests that caught a duplicate-record bug, fixed with
+  a uniqueness check) and a Study Planner React project.
+- **Job:** Software Engineering Intern, Backend.
+- **Weak answer:** “We built an API for campus events. We used Python and FastAPI, and it
+  worked pretty well.”
+- **Retry answer:** what Alex implemented, why SQLite, what the tests caught, and the fix.
+  Every fact in it is in the resume.
+
+## Click by click (Chrome, http://127.0.0.1:8000, zoom 110%)
+
+| # | Click | What appears | Say (short) |
+| --- | --- | --- | --- |
+| 1 | Setup screen is already open | Header says **Gemini mode** | Problem |
+| 2 | **Load an example** ↗ | Both text boxes fill | “Fictional student” |
+| 3 | **Start practicing** | Question 1 in ~2 s | “Tied to exact lines” → point at **Why this question?** |
+| 4 | **Use example text** (below the answer box) | Weak answer fills | Read it aloud |
+| 5 | **Reflect my answer** | Feedback in ~2 s | Point at the at-a-glance strip, then the **Your contribution** card and its quote |
+| 6 | Scroll down a little | Green **One follow-up** box | “One question, aimed at the gap” |
+| 7 | **Try the original again** | Same question, empty box | “Now I retry” |
+| 8 | **Use example text** → **Reflect my answer** | **See what changed.** at the top, in ~2 s | Point at **Improved**, then the before/after columns |
+| 9 | (Optional) **Finish & see takeaways** | Report | Close |
+
+Ratings vary slightly between runs. Usually several criteria improve after the retry. If
+one stays at “Needs a closer look”, say: “It still wants more on that part. A retry can
+improve, stay the same, or show another gap.” Don’t promise specific labels.
+
+Voice (optional, ~15 s, only if the room is quiet and you tested your microphone that
+morning): on any answer screen click **Speak your answer**, say one sentence, click
+**Stop**, show the editable transcript. The main path never depends on it.
+
+## Fallback order
+
+1. **Live Gemini** if the morning preflight passes and responses come back in a few
+   seconds.
+2. **Recording of a real AI run** if Gemini fails twice in a row during the demo, or the
+   network is down. Say: “This is a recording of the same flow from last night.”
+3. **Local practice mode** if no recording is available. Choose **Local practice** on the
+   setup screen and say: “This is the offline mode. Fixed questions and keyword rules, not
+   AI.” The loop and the comparison work the same way.
+
+Never present a recording or local mode as live AI.
+
+| Symptom during the demo | Do this |
+| --- | --- |
+| Spinner longer than ~10 s | Keep talking (technical line). The server retries automatically. |
+| Red message: busy / timed out / evidence checks | Click **Reflect my answer** again. The answer is kept. |
+| Fails twice, or “Could not reach the server” | Go to fallback 2. |
+| Microphone fails | Type. |
+
+## Backup recordings
+
+- **Silent capture (exists):** `demo-backup/interviewmirror-live-flow.webm`, 72 s, recorded
+  on the evening of October 9 from a real Gemini run (gemini-3.5-flash-lite) by browser
+  automation, with the current layout and demo data. It has **no narration**. Opens in
+  Chrome or VLC (QuickTime cannot play WebM).
+- **Narrated recording (make it tonight):**
+  1. Start the server, open the app in Chrome, zoom 110%, close other tabs.
+  2. Press ⌘⇧5, choose **Record Selected Portion** around the Chrome window, then
+     **Options → Microphone: MacBook Pro Microphone** (or your mic).
+  3. Click **Record**, follow the script once, then click the stop button in the menu bar.
+  4. Rename the file to `demo-backup/interviewmirror-demo-narrated.mov` and play it back
+     once, start to finish, with sound.
+
+`demo-backup/` is git-ignored and never pushed.
+
+## Physical microphone checklist (do once, ~3 minutes)
+
+1. Chrome, http://127.0.0.1:8000, Gemini mode, load the example, start practicing.
+2. Click **Speak your answer**. Chrome asks for the microphone: click **Allow**.
+   (If you clicked Block before: click the icon left of the address bar → Microphone →
+   Allow → reload.)
+3. The button turns red and counts seconds. Say: “I implemented the API-key authentication
+   and chose SQLite for the prototype.”
+4. Click **Stop**. Within a few seconds the text appears in the answer box and a toast says
+   “Transcript added”. An audio player lets you replay the recording.
+5. Fix any misspelling in the box (for example “SQ Lite”), then **Reflect my answer**.
+6. Optional failure check: turn Wi-Fi off, record and stop. You should see a red message,
+   the recording stays, and **Retry transcription** appears. Turn Wi-Fi on and click it.
+7. If macOS blocks Chrome entirely: System Settings → Privacy & Security → Microphone →
+   enable Google Chrome, then restart Chrome.
 
 ## The evening before
 
-- [ ] `./start.sh` on the presentation laptop, open http://127.0.0.1:8000 in Chrome.
+- [ ] `./start.sh`, open http://127.0.0.1:8000 in Chrome.
 - [ ] `.venv/bin/python -m backend.preflight` prints PASS twice.
-- [ ] Run the script above end to end twice, timing it.
-- [ ] Record the narrated backup video (below) from a successful live run.
-- [ ] Allow the microphone for 127.0.0.1 in Chrome if you plan to show voice.
-- [ ] Charge the laptop; turn on Do Not Disturb; close other tabs and apps.
+- [ ] Run the click-by-click once yourself (including the retry and comparison).
+- [ ] Physical microphone checklist (above).
+- [ ] Record the narrated backup and play it back.
+- [ ] Rehearse the pitch twice with a timer.
 
-## Demo morning (from 8:30 AM)
+## Morning of October 10 (start by 8:30 AM)
 
-- [ ] Join the venue Wi-Fi (have a phone hotspot ready as a second network).
-- [ ] Start the server: `./start.sh` (or the manual `uvicorn` command in the README).
-- [ ] `.venv/bin/python -m backend.preflight` → PASS twice. A “failed (status 503)” line
-      above PASS only means the fallback model answered.
-- [ ] Open the app, confirm the header says **Gemini mode**, zoom Chrome to 110–125%.
-- [ ] Leave the setup screen open. Have the backup video open in QuickTime in a
-      second window.
-
-## If something goes wrong live
-
-| Symptom | Do this |
-| --- | --- |
-| Spinner past ~15 s | Keep talking (the technical-challenge line). The server tries the fallback model after 28 s at most. |
-| Red error “busy / timed out / evidence checks” | Click the same button again; the answer is kept. |
-| Fails twice, or no network | Switch to the backup video and say: “This is a recording of the same flow from last night.” |
-| No video either | Choose **Local practice** on the setup screen and say: “This is the offline mode — fixed questions and keyword rules, not AI.” The loop is identical. |
-| Microphone fails | Type; voice is optional. |
-
-Never present local-mode output or a recording as live AI.
-
-## Backup recording
-
-1. **Narrated video (do this yourself):** after a successful live run, press
-   ⌘⇧5 → *Record Selected Portion* around the browser window and follow the script with
-   your voice. Save it as `demo-backup/interviewmirror-demo-narrated.mov`.
-2. **Silent capture (already made):** `demo-backup/interviewmirror-live-flow.webm` is an
-   automated Chrome recording of the same flow with live Gemini output, made on
-   2026-10-09. Use it only if the narrated video is missing, and say it is a recording.
-
-`demo-backup/` is git-ignored.
-
-## Claims to avoid
-
-- Don’t say feedback “verifies” or “proves” experience. Quote checks prove a passage
-  exists in the input.
-- Don’t call local mode AI, and don’t call a recording live.
-- Don’t promise hiring outcomes or scores; there are none.
-- The microphone was tested with Chrome’s fake device and real Gemini transcription, not
-  with every browser; Safari/Firefox codecs are unverified.
+- [ ] Connect to the venue Wi-Fi; have a phone hotspot ready.
+- [ ] Start the server: `./start.sh` (leave that terminal open).
+- [ ] `.venv/bin/python -m backend.preflight` → PASS twice. A line saying an attempt
+      “failed (status 503)” above PASS only means the fallback answered.
+- [ ] One full request in the browser: load the example, start, submit the example answer.
+- [ ] Test the microphone once (steps 2–4 above) if you plan to show voice.
+- [ ] Display: mirror or extend the screen, Chrome zoom 110–125%, hide bookmarks bar
+      (⌘⇧B), full screen (⌃⌘F).
+- [ ] Open the backup video in Chrome in a second tab and check it plays.
+- [ ] Reload the app (setup screen), header says **Gemini mode**.
+- [ ] Turn on Do Not Disturb; quit Slack, Messages, Mail, and anything that pops up.
+- [ ] Say the pitch out loud once.

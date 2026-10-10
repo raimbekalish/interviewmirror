@@ -2,48 +2,127 @@
 
 **You have the experience. Practice explaining it.**
 
-Independent WhitHack 2026 project for the Ingeniux interview-practice challenge.
-No Internship Radar integration or imported code.
+InterviewMirror is an interview-practice coach for students. It asks questions grounded in
+your own resume and a real job description, shows exactly which words in your answer its
+feedback is based on, asks one targeted follow-up, and lets you retry the question so you
+can see what changed.
 
-The app connects a job requirement to a resume excerpt, asks a question, provides
-feedback tied to exact answer quotes, asks a targeted follow-up, and lets you retry
-the original question. The before/after view compares observations in both attempts.
+Built solo for **WhitHack 2026** (Ingeniux challenge: accessible, on-demand interview
+practice with personalized questions and realistic feedback).
 
-## Run on your laptop
+[![CI](https://github.com/raimbekalish/interviewmirror/actions/workflows/ci.yml/badge.svg)](https://github.com/raimbekalish/interviewmirror/actions/workflows/ci.yml)
 
-Requires Node.js 22+ and Python 3.12+. From the extracted project directory:
+![Before/after comparison after retrying a question](docs/screenshots/3-comparison.png)
+
+## The problem
+
+Students often have real project experience but explain it poorly in interviews: “We built
+an API, it worked well.” The interviewer still doesn’t know what *you* did, why you made a
+decision, or what happened. Generic practice tools ask generic questions and return a score
+or a wall of advice, with no way to tell what the feedback is based on.
+
+## What it does
+
+1. **Personalized questions.** Paste a resume and a job description. Gemini picks three
+   questions, each tied to an exact resume line and an exact job requirement, which are
+   shown next to the question.
+2. **Feedback you can check.** Each answer is observed on four criteria: *answers the
+   question*, *your contribution*, *decision & reasoning*, *result or learning*. Every
+   rated observation quotes the exact words in your answer it is based on.
+3. **One adaptive follow-up.** A single, narrower question aimed at the biggest gap, with
+   the reason it was chosen.
+4. **Retry and compare.** Answer the original question again (as many times as you like).
+   The comparison shows both attempts side by side, which criteria improved, which still
+   need attention, and any that got weaker.
+5. **Takeaways.** A summary of all questions, copyable or downloadable as JSON.
+6. **Voice input.** Record up to 60 s; Gemini transcribes it into an editable text box.
+   Typing always works.
+7. **Local practice mode.** Works with no API key using fixed questions and transparent
+   keyword rules. It is clearly labeled **not AI** everywhere it appears.
+
+![Feedback screen with quoted evidence and a follow-up](docs/screenshots/2-feedback.png)
+
+## How the AI workflow works
+
+```text
+Resume + job description
+  → /api/plan      3 questions, each with an exact resume excerpt and job excerpt
+  → answer (typed or transcribed)
+  → /api/assess    4 criteria, each with an exact quote from the answer,
+                   one follow-up + reason, next step, optional resume hint
+  → follow-up answer (assessed together with the first answer)
+  → retry of the original question → /api/assess
+  → comparison of first attempt vs latest retry, computed in the browser
+```
+
+Every Gemini call uses **JSON Schema structured output**, then the server validates it:
+
+- **Pydantic** checks the shape, lengths, and that each criterion appears exactly once.
+- **Quote checks:** every quoted excerpt must be a contiguous substring of the answer
+  (or resume / job description). A quote that differs only in whitespace, curly quotes, or
+  dashes is replaced by the original text first, so what you see is always verbatim.
+  Anything else is rejected, never displayed.
+- **No invented achievements:** prompts forbid adding facts, numbers, or results; next
+  steps may only reference details already in the answer or resume and say “if accurate”.
+  As a deterministic guard, an outcome quote containing a number that appears nowhere in
+  the resume is capped at “Needs a closer look”.
+- **Reliability:** each request tries `GEMINI_MODEL`, then `GEMINI_FALLBACK_MODEL` if the
+  first is busy (429/5xx), slow (28 s), or fails the checks, then the primary once more if
+  time remains within the browser’s 65 s limit. The response header
+  `X-InterviewMirror-Model` and the server log name the model that actually answered.
+
+The quote check proves a passage exists in your input. It does **not** prove a claim is
+true, and Gemini’s judgment can be wrong. This is practice feedback, not a hiring
+prediction, and there is deliberately no overall score.
+
+## Tech stack
+
+- **Frontend:** React 19, TypeScript, Vite, lucide-react icons
+- **Backend:** FastAPI, Pydantic v2, HTTPX (async), python-dotenv
+- **AI:** Google Gemini `generateContent` REST API with JSON Schema output and audio input
+- **Tests:** Node’s built-in test runner + JSDOM + Testing Library; pytest with a mocked
+  Gemini client; GitHub Actions CI (no credentials, no live API calls)
+
+## Architecture
+
+```text
+Browser (React, state kept in memory for this tab)
+   │  same-origin HTTP
+FastAPI (serves the built UI and the API on 127.0.0.1:8000)
+   ├─ GET  /api/health      key configured? which model? (never the key)
+   ├─ POST /api/plan        resume + job → 3 grounded questions
+   ├─ POST /api/assess      resume + job + question + answer → quote-checked rubric
+   └─ POST /api/transcribe  audio (≤10 MB) → transcript
+   │  API key sent server-side in an HTTP header
+Google Gemini
+```
+
+The server is stateless: no database, no stored answers or audio. Code lives in
+[`backend/main.py`](backend/main.py) and [`frontend/src/`](frontend/src/).
+
+## Run it locally
+
+Requires **Node.js 22+** and **Python 3.12+**.
 
 ```bash
+git clone https://github.com/raimbekalish/interviewmirror.git
+cd interviewmirror
 cp .env.example .env
 ```
 
-Open `.env` in your editor and set `GEMINI_API_KEY` to a key from
-[Google AI Studio](https://aistudio.google.com/apikey), or export `GEMINI_API_KEY` in your
-shell profile (an exported variable takes precedence over `.env`). Keep the key on your
-laptop; never put it in frontend code, chat, or a commit. `.env` is git-ignored.
-
-Models are configurable in `.env`. Defaults: `GEMINI_MODEL=gemini-3.5-flash-lite`,
-`GEMINI_FALLBACK_MODEL=gemini-flash-lite-latest`, `GEMINI_THINKING_LEVEL=low`. In testing on
-2026-10-09 these answered in about 2 s with consistent ratings across repeated runs. The
-`gemini-flash-latest` alias took 60–120 s with default thinking (beyond the request timeout),
-and `gemini-3.5-flash` returned 503 “high demand” on nearly every request that evening.
-
-Before a demo, check the live connection (prints timings and PASS/FAIL, never the key):
+Put a key from [Google AI Studio](https://aistudio.google.com/apikey) in `.env`
+(`GEMINI_API_KEY=...`), or export `GEMINI_API_KEY` in your shell; an exported variable
+takes precedence. Never put the key in frontend code or a commit (`.env` is git-ignored).
+Without a key, the app still runs in local practice mode.
 
 ```bash
-.venv/bin/python -m backend.preflight
-```
-
-```bash
-chmod +x start.sh
 ./start.sh
 ```
 
-Open **http://127.0.0.1:8000**. The script installs dependencies, builds the React UI,
-and serves the UI and API together with FastAPI. Stop it with Ctrl+C. Restart the API
-after changing `.env`. No key is needed for the clearly labeled local practice mode.
+Open **http://127.0.0.1:8000**. The script creates `.venv`, installs dependencies, builds the
+UI, and serves everything with FastAPI. Stop with Ctrl+C; restart after editing `.env`.
 
-To install and run manually:
+Manual equivalent:
 
 ```bash
 python3 -m venv .venv
@@ -53,139 +132,82 @@ npm run build
 .venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-Windows: use `.venv\Scripts\python` and `.venv\Scripts\pip` instead of `.venv/bin/…`.
+For frontend development, keep the API running and use `npm run dev` (Vite proxies `/api`
+to port 8000). On Windows use `.venv\Scripts\python`.
 
-For development, run the API as above and `npm run dev` in a second terminal. Vite
-proxies `/api` to FastAPI at port 8000.
+**Environment variables** (see [`.env.example`](.env.example)):
 
-## Modes
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | — | Required for AI mode. Server-side only. |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Primary model |
+| `GEMINI_FALLBACK_MODEL` | `gemini-flash-lite-latest` | Tried if the primary is busy, slow, or fails checks |
+| `GEMINI_THINKING_LEVEL` | `low` | Gemini 3 thinking level; leave empty for models without it |
 
-- **Gemini AI:** stateless server calls with JSON Schema output, Pydantic validation,
-  and exact quote validation. Three personalized questions, answer-dependent follow-ups,
-  four rubric dimensions, optional resume-grounded hints. Voice input records up to
-  60 seconds, transcribes through Gemini, and lets the user edit before submitting.
-  Each request tries the primary model, then the fallback model if the first is busy
-  (429/5xx), times out (28 s), or fails the evidence checks, then the primary once more
-  after a 1 s pause if there is still time within the browser's 65 s limit. The server log names
-  the model that failed; it never logs inputs, provider bodies, or the key.
-- **Local practice:** fixed question templates and transparent English keyword rules.
-  Works without an API key and in the static hosted preview. This mode is **not AI**
-  and does not establish semantic understanding; its relevance check remains partial
-  even when it finds matching terms. It is useful to exercise the product flow.
-
-**Verified on 2026-10-09** (macOS, Chrome, real Gemini key): question generation and
-assessment (typically 2–6 s), the follow-up and retry loop, the comparison and report,
-fallback after real `503` responses from the primary model, and recording through
-Chrome's MediaRecorder (WebM/Opus) with a synthetic voice played through Chrome's fake
-microphone, transcribed by Gemini into the editable answer box. Failure recovery checked
-in the browser: blocked microphone, failed transcription with "Retry transcription"
-keeping the recording, and a dropped assessment request keeping the typed answer.
-Desktop (1440 px) and phone (390 px) layouts were inspected in screenshots.
-
-**Not yet verified:** a physical microphone, Safari/Firefox recording codecs, and the
-presentation laptop/network. The hosted preview contains the static UI and local practice
-mode only. A “Gemini mode” label means credentials are configured (hover it to see the
-model), not that a request has succeeded. Errors keep the user's answer and never switch
-engines silently.
-
-## Demo in two minutes
-
-The timed script, demo-morning checklist, and backup plan are in
-[docs/demo.md](docs/demo.md). Short version:
-
-1. Load the fictional Campus Events example. Start practice. Point at the resume and job
-   excerpts behind the question.
-2. Give the vague team answer (“Use example text”). Show the contribution gap, the
-   quote it points to, and the follow-up with its reason.
-3. Retry the original question (“Use example text”). Show both attempts and the
-   criterion changes.
-4. Finish, show the takeaways, and say which mode you used.
-
-Example data belongs to a fictional student, Alex Morgan. It is not Raimbek's resume
-and is never automatically represented as a real user's qualifications.
-
-## Architecture
-
-```text
-React / TypeScript (Vite)
-  setup → first answer → feedback → follow-up → retry → comparison → report
-           ↓ same-origin HTTP
-FastAPI / Pydantic
-  /api/plan       Context → 3 questions with checked source excerpts
-  /api/assess     Context + question + answer → checked quote-backed rubric
-  /api/transcribe Audio → editable transcript
-  /api/health     Configuration state, never the key
-           ↓ server-held API key in an HTTP header
-Gemini generateContent / JSON Schema
-```
-
-The Python API does not store sessions, answers, or audio. The frontend keeps state
-only in memory for the current tab; reloading clears it. Reports download only when
-the user requests an export. No automatic resume updates or achievement attestations.
-
-## Engineering decisions and limitations
-
-- **Four observations instead of an overall score:** relevance, ownership, reasoning,
-  and outcome/learning are shown with evidence and specific feedback. No arbitrary
-  “87/100” or hiring-success prediction.
-- **Exact excerpts:** clear/partial findings require a supporting answer quote. Every
-  quote must be a contiguous exact substring. The API rejects fabricated quotes,
-  duplicate dimensions, or unsupported resume hints instead of displaying them. A quote
-  that differs from the source only in whitespace, curly quotes, or dashes is replaced
-  by the source's own text before checking, so what is displayed is always verbatim.
-- **Coaching rules:** feedback speaks to “you”; the follow-up is one narrower question
-  aimed at the weakest criterion (or at depth when all are clear); next steps may only
-  reference details in the answer or resume and say “if accurate”. Claims in an answer
-  that are not in the resume are neither praised nor called false; the coach notes that
-  an interviewer will likely ask how they were measured. As a deterministic guard, an outcome quote
-  containing a number that appears nowhere in the resume is shown as “Needs a closer look”
-  rather than “Detail present”.
-- **Grounding has limits:** quote validation proves a passage exists, not that the
-  achievement is true or the interpretation correct. Gemini feedback can be wrong.
-- **No invented model answers:** the coach asks for missing information and gives
-  an outline of what to explain; it does not add metrics or achievements.
-- **Simple session boundaries:** one follow-up and one retry per question; three
-  questions maximum. Sessions are stateless on the server.
-- **Bounded requests:** capped text inputs and a 10 MB recording limit, request
-  timeouts, clear retry messages, and no provider-key/error-body logging.
-- **Voice fallback:** type at any time. Browser recording depends on HTTPS or localhost,
-  microphone permission, and codec support. Browser speech synthesis can read questions.
-  The transcriber receives the current question and resume only as spelling context for
-  names and technical terms; always proofread the transcript before sending.
-- **Privacy:** local mode sends no context to Gemini. AI mode sends submitted context
-  and answers to Google, and audio only when the microphone feature is used. Google
-  processing/retention follows the key's service terms. The app itself has no database.
-- **Hosting:** static preview is private and includes only the local heuristic mode.
-  Production Python hosting/authentication is outside this hackathon build. The local
-  server binds to loopback by default and should not be exposed as a public AI proxy.
-
-## Checks
+Check the live connection before a demo (prints timings and PASS/FAIL, never the key):
 
 ```bash
-npm run build
-npm test
-.venv/bin/python -m pytest backend/tests -q
+.venv/bin/python -m backend.preflight
 ```
 
-Tests cover model fallback and provider error mapping, near-exact quote anchoring,
-microphone-permission errors, the inline follow-up, literal quote grounding, unsupported citations, duplicate rubric dimensions,
-empty/oversized inputs, audio boundaries, API credential/rate-limit/timeout failures,
-the local coaching loop, retry comparison, all three questions, and preserving drafts
-after a failed AI request. UI interaction checks run in JSDOM; they do not verify layout,
-real microphone access, audio codecs, or provider behavior. Browser visual QA was not
-available in the build environment.
+## Local practice mode
 
-## API reference
+Choose **Local practice** on the setup screen. Questions come from fixed templates;
+feedback comes from simple English keyword rules in
+[`frontend/src/local-engine.mjs`](frontend/src/local-engine.mjs). Nothing is sent anywhere.
+It exercises the full coaching loop but does not understand meaning, so its relevance check
+never goes above “Needs a closer look”. The header reads “Local practice · no AI”.
 
-Interactive documentation: http://127.0.0.1:8000/docs
+## Tests
 
-References used during implementation:
-- [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output)
-- [Gemini audio understanding](https://ai.google.dev/gemini-api/docs/audio)
-- [MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder)
+```bash
+npm run build                                # type-check + production build
+npm test                                     # 15 UI and local-engine tests (JSDOM)
+.venv/bin/python -m pytest backend/tests -q  # 33 API tests, Gemini mocked
+```
 
-## Attribution
+Covered: quote grounding and anchoring, rejected fabricated quotes and resume hints,
+duplicate criteria, model fallback order, busy/timeout/invalid-key handling, the timing
+budget, the model header, transcription context, input limits, the full local coaching
+loop, repeated retries compared against the first attempt, the comparison summary, the
+leave warning, microphone-permission errors, and answers preserved after failures.
 
-Created with AI-assisted implementation for WhitHack. React, Vite, FastAPI, Pydantic,
-HTTPX, and Lucide are third-party dependencies. Google Fonts: DM Sans and Instrument
-Serif, with system-font fallbacks. No generated images or reused Internship Radar code.
+Browser checks with real Gemini and Chrome are recorded in
+[docs/verification.md](docs/verification.md). Unit tests do not cover layout, real
+microphones, or provider behavior.
+
+## Known limitations
+
+- **No persistence.** Sessions live in the browser tab; reloading clears them (the app
+  warns before leaving once you have answered). Download the report to keep it.
+- **Model variance.** The same answer can get slightly different ratings across runs
+  (for example “Not explained yet” vs “Needs a closer look”). Quotes are always checked.
+- **Gemini availability.** Google returned 503 “high demand” errors during testing; the
+  fallback handles most of them, but if every attempt fails the app says so and keeps your
+  answer. It never switches to local mode silently.
+- **Voice.** Tested in Chrome with a simulated microphone. A physical microphone and
+  Safari/Firefox recording codecs have not been verified. Transcripts can misspell technical
+  terms, so they are always editable.
+- **English only** for the local mode rules. **Local use only:** the server binds to
+  loopback and has no authentication; it should not be exposed as a public AI proxy.
+
+## Privacy and security
+
+- The API key stays on the server and is sent to Google in a request header.
+- AI mode sends the resume, job description, answers, and (only when recording) audio to
+  Google; processing follows your key’s terms. Local mode sends nothing.
+- The server never logs inputs, provider response bodies, or the key.
+- Example data belongs to a fictional student, Alex Morgan.
+
+## Project docs
+
+- [docs/demo.md](docs/demo.md): two-minute script, click-by-click demo, backup plan,
+  morning checklist, microphone checklist
+- [docs/pitch.md](docs/pitch.md): spoken pitch, 30-second version, judges’ questions
+- [docs/verification.md](docs/verification.md): what was verified, how, and what was not
+
+## Acknowledgments
+
+Built by a solo participant, Raimbek Alish, during WhitHack 2026, with AI-assisted
+implementation. React, Vite, FastAPI, Pydantic, HTTPX, and Lucide are third-party
+dependencies; fonts are DM Sans and Instrument Serif from Google Fonts.

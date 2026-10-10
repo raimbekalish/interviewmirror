@@ -4,6 +4,7 @@ Project: Campus Events API
 I built a FastAPI service for campus event listings and implemented API-key authentication.
 I chose SQLite for a small single-server prototype because setup was simple and the app did not need concurrent writes.
 I wrote tests for invalid API keys and duplicate event submissions. Those tests caught a duplicate-record bug before the demo.
+I fixed it with a uniqueness check, so duplicate submissions return a clear error instead of creating a second record.
 Project: Study Planner
 I developed a React interface that helps students organize weekly tasks. I changed the layout after two classmates struggled to find the add-task button.`;
 export const sampleJob = `Software Engineering Intern — Backend
@@ -12,7 +13,7 @@ Explain technical tradeoffs and work with teammates to choose practical solution
 Write tests, investigate bugs, and improve reliability.
 Experience with Python, JavaScript, and relational databases is helpful.`;
 export const sampleFirst = 'We built an API for campus events. We used Python and FastAPI, and it worked pretty well.';
-export const sampleRetry = 'I implemented the event-listing endpoints and API-key authentication in our FastAPI service. I chose SQLite because we had a small single-server prototype and did not need concurrent writes. I wrote tests for invalid keys and duplicate submissions; the duplicate test caught a record-creation bug before our demo.';
+export const sampleRetry = 'I implemented the event-listing endpoints and API-key authentication in our FastAPI service. I chose SQLite because we had a small single-server prototype and did not need concurrent writes. I wrote tests for invalid keys and duplicate submissions; the duplicate test caught a record-creation bug before our demo. I fixed it with a uniqueness check, so a duplicate submission now returns a clear error instead of creating a second record.';
 
 const sentences = text => (text.match(/[^.!?\n]+(?:[.!?]+|$)/g) || [text]).map(s => s.trim()).filter(Boolean);
 const words = text => (text.toLowerCase().match(/[a-z][a-z0-9+#-]{2,}/g) || []).filter(w => !new Set(['the','and','for','with','that','this','from','your','what','how','did','you','was','our','have','used','built','project','about','one','would','were','which','because','into','their','then','they','there']).has(w));

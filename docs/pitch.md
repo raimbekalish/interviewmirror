@@ -1,39 +1,105 @@
-# Two-minute pitch
+# Pitch — InterviewMirror (WhitHack 2026, solo)
 
-I built InterviewMirror because having project experience and explaining it in an
-interview are different skills. A student might say, “We built an API,” while the
-interviewer still does not know what they personally did or why they made a decision.
+Clicks and timing are in [demo.md](demo.md). This page is what you say.
 
-The app starts with your resume and a job description. Each question connects an
-excerpt of your experience to a requirement from the role.
+## Two-minute script
 
-Here is a deliberately vague answer. Instead of giving a mysterious score, the coach
-shows the missing detail and the exact words behind its feedback. This follow-up
-asks for my contribution because I only described the team's work.
+**0:00 — Problem (setup screen open)**
+“Most students I know have done real projects. The hard part is explaining them in an
+interview. You say ‘we built an API and it worked pretty well’, and the interviewer still
+has no idea what *you* did. Practicing alone doesn’t help much, because nobody tells you
+what’s missing.”
 
-Now I try the original question again. The comparison shows what I added: my role,
-a reason for a technical decision, and an observed result. I can see the difference
-and keep the takeaways for my next practice session.
+**0:20 — Product (load the example, start)**
+“InterviewMirror is a practice coach built around your own experience. I paste a resume
+and a job description — this is a fictional student — and it asks three questions. Each
+one shows the exact resume line and the exact job requirement it came from, so you know
+why you’re being asked.”
 
-The technical challenge was making feedback inspectable. The server validates
-structured responses and checks that every quoted passage actually exists in the
-answer or supplied notes. Unsupported quotes are rejected. That checks the source,
-not the truth of a claim; this is coaching, not an employment assessment.
+**0:40 — Weak answer (use example text, submit)**
+“I’ll answer the way a lot of us actually do: ‘We built an API for campus events. We used
+Python and FastAPI, and it worked pretty well.’”
+(pause for feedback, ~2 seconds)
+“There’s no score. It looks at four things: did I answer the question, what did I
+personally do, why did I make a decision, and what happened. And every observation quotes
+my own words, so I can see exactly what it’s reacting to. Here, my contribution is missing,
+because I only said ‘we’.”
 
-I built the interview module independently during WhitHack. The app supports Gemini
-and also has an explicitly labeled local heuristic demo. [State which mode you are
-actually showing.] My focus was one finished coaching loop that a student can use
-on their own schedule, with feedback they can understand and challenge.
+**1:10 — Wow moment (point at follow-up, retry, submit)**
+“It asks one follow-up aimed at that gap and tells me why. It doesn’t write the answer for
+me. Now I try the original question again, this time with what I did, why I chose SQLite,
+and what my tests caught.”
+(pause, ~2 seconds)
+“And this is the part I care about: the same question, before and after, side by side. It
+shows which parts improved and what still needs work, straight from the two evaluations.”
 
-# Before presenting
+**1:35 — Technical**
+“Under the hood, Gemini returns structured JSON, and my FastAPI server checks it before
+anything reaches the screen. Every quote has to appear word for word in what you wrote, or
+the response is rejected. If Gemini is overloaded, which happened a lot while I was
+testing, it retries on a fallback model. And it never pretends a quote proves an
+achievement is true. It only proves you said it.”
 
-The timed click-by-click script, morning checklist, and fallback plan are in
-[demo.md](demo.md).
+**1:50 — Close**
+“So it’s not a chatbot that tells you you did great. It shows you the missing detail, lets
+you fix it, and shows you that you fixed it. I built it solo this weekend. This demo is
+running live on Gemini.”
+(If you are showing the recording or local mode, say that instead. See demo.md.)
 
-- Confirm allowed AI-assistance disclosures with the organizers.
-- Run the full flow on the presentation laptop, in the intended mode.
-- Test the microphone only after the text flow works with a real key.
-- Record a short backup screen recording and say when showing recorded output.
-- Show the original question, exact quote, reason for the follow-up, and comparison.
-- Do not describe the local heuristic engine as live AI or its observations as proof
-  of interview readiness.
+## 30-second emergency pitch
+
+“InterviewMirror helps students explain their own experience in interviews. You paste
+your resume and a job description, it asks three questions tied to exact lines from both,
+and it gives feedback on four things: answering the question, your personal contribution,
+your reasoning, and the result. Every piece of feedback quotes your exact words, and the
+server rejects any quote that isn’t really there. Then you retry the same question and see
+what improved. I built it solo with React, FastAPI, and Gemini.”
+
+## Three likely questions from judges
+
+**“How is this different from asking ChatGPT to grade my answer?”**
+“Three things. The questions come from specific lines in your resume and the job posting,
+and it shows you which. The feedback has to cite your exact words, and my server checks
+every quote against what you actually wrote and rejects the response if it doesn’t match.
+And it keeps the session structured: one follow-up, then a retry of the same question, so
+you can compare before and after instead of getting a new essay every time.”
+
+**“What if Gemini is wrong or makes things up?”**
+“It can be wrong about judgment, so I don’t show a score or hiring prediction, and the
+quotes let you check what it’s reacting to. What it can’t do is put words in your mouth:
+quotes are validated on the server, the prompts forbid adding facts or numbers, and next
+steps can only mention things already in your answer or resume. If an answer claims a
+number that isn’t in the resume, it’s capped at ‘needs a closer look’ by plain code, not by
+the model.”
+
+**“What was the hardest part?”**
+“Reliability. The default model I started with took over a minute per request, and later
+Google kept returning ‘high demand’ errors. I measured a few models, switched to a fast one,
+and added a fallback with a strict time budget so the browser never waits forever and your
+answer is never lost. I also had to tune the prompts after seeing real output: it was
+praising made-up metrics and suggesting details that weren’t in the resume.”
+
+## Engineering decisions worth mentioning
+
+1. **Validate model output on the server instead of trusting it.** JSON Schema output plus
+   Pydantic plus exact-substring quote checks. Bad responses are retried or rejected, never
+   shown.
+2. **No score.** Four observable criteria with quoted evidence, because a number like 72/100
+   isn’t actionable and can’t be checked.
+3. **Bounded fallback.** Primary model → fallback model → one more try, inside a 65-second
+   budget, with the model that answered recorded in a response header. Recoverable errors
+   keep the user’s text.
+
+## Honest tradeoffs (if asked)
+
+- No accounts or database: sessions live in the browser tab. Faster to build and better
+  for privacy; the cost is that a reload clears the session (the app warns first).
+- Runs locally: the server has no authentication, so it isn’t deployed as a public site.
+- Ratings vary a little between runs; the quote checks don’t.
+- Voice was tested with a simulated microphone in Chrome; typing always works.
+
+## Things not to claim
+
+- Don’t say it verifies experience or proves achievements.
+- Don’t call local mode AI or a recording live.
+- Don’t invent users, metrics, or teammates. It’s a solo project.
