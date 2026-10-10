@@ -1,0 +1,29 @@
+# Dependencies and builds
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.sites-runtime/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.openai/
+.vscode/
+.idea/
+
+# Logs, recordings, and local files
+*.log
+demo-backup/
+recordings/
+*.webm
+*.m4a
+*.wav
+*.aiff
+*.mov
+.DS_Store
+*.zip
+*.tar.gz
