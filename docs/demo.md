@@ -66,13 +66,14 @@ Never present a recording or local mode as live AI.
   on the evening of October 9 from a real Gemini run (gemini-3.5-flash-lite) by browser
   automation, with the current layout and demo data. It has **no narration**. Opens in
   Chrome or VLC (QuickTime cannot play WebM).
-- **Narrated recording (make it tonight):**
-  1. Start the server, open the app in Chrome, zoom 110%, close other tabs.
-  2. Press ⌘⇧5, choose **Record Selected Portion** around the Chrome window, then
-     **Options → Microphone: MacBook Pro Microphone** (or your mic).
-  3. Click **Record**, follow the script once, then click the stop button in the menu bar.
-  4. Rename the file to `demo-backup/interviewmirror-demo-narrated.mov` and play it back
-     once, start to finish, with sound.
+- **Narrated video (exists, preferred backup):** `demo-backup/interviewmirror-demo-narrated.mp4`,
+  1920×1080 H.264 with AAC narration, 1 min 31 s. Recorded on the evening of October 9
+  from a real Gemini run (gemini-3.5-flash-lite) with captions; the narration is a macOS
+  synthetic voice, not you. An on-screen label says “RECORDING · Oct 9, 2026 · Live Gemini ·
+  Fictional data”. Plays in QuickTime and Chrome.
+- **Your own narrated recording (optional):** press ⌘⇧5 → **Record Selected Portion**
+  around Chrome → **Options → Microphone** → **Record**, follow the script, stop from the
+  menu bar, save it in `demo-backup/`.
 
 `demo-backup/` is git-ignored and never pushed.
 
@@ -98,20 +99,22 @@ Never present a recording or local mode as live AI.
 - [ ] `.venv/bin/python -m backend.preflight` prints PASS twice.
 - [ ] Run the click-by-click once yourself (including the retry and comparison).
 - [ ] Physical microphone checklist (above).
-- [ ] Record the narrated backup and play it back.
+- [ ] Watch the narrated backup video once with sound.
 - [ ] Rehearse the pitch twice with a timer.
 
 ## Morning of October 10 (start by 8:30 AM)
 
 - [ ] Connect to the venue Wi-Fi; have a phone hotspot ready.
-- [ ] Start the server: `./start.sh` (leave that terminal open).
+- [ ] Start the server: `./start.sh` (leave that terminal open). On the presentation
+      laptop, the local helper `demo-backup/START-DEMO.command` (not in git) does this,
+      runs the preflight, and opens a clean Chrome window with the app and the backup video.
 - [ ] `.venv/bin/python -m backend.preflight` → PASS twice. A line saying an attempt
       “failed (status 503)” above PASS only means the fallback answered.
 - [ ] One full request in the browser: load the example, start, submit the example answer.
 - [ ] Test the microphone once (steps 2–4 above) if you plan to show voice.
 - [ ] Display: mirror or extend the screen, Chrome zoom 110–125%, hide bookmarks bar
       (⌘⇧B), full screen (⌃⌘F).
-- [ ] Open the backup video in Chrome in a second tab and check it plays.
+- [ ] Check the backup video plays (second tab in the demo window, or QuickTime).
 - [ ] Reload the app (setup screen), header says **Gemini mode**.
 - [ ] Turn on Do Not Disturb; quit Slack, Messages, Mail, and anything that pops up.
 - [ ] Say the pitch out loud once.

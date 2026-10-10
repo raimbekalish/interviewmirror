@@ -22,8 +22,8 @@ Python and FastAPI, and it worked pretty well.’”
 (pause for feedback, ~2 seconds)
 “There’s no score. It looks at four things: did I answer the question, what did I
 personally do, why did I make a decision, and what happened. And every observation quotes
-my own words, so I can see exactly what it’s reacting to. Here, my contribution is missing,
-because I only said ‘we’.”
+my own words, so I can see exactly what it’s reacting to. Here it points out that I never
+said what I personally did. I only said ‘we’.”
 
 **1:10 — Wow moment (point at follow-up, retry, submit)**
 “It asks one follow-up aimed at that gap and tells me why. It doesn’t write the answer for
@@ -42,9 +42,36 @@ achievement is true. It only proves you said it.”
 
 **1:50 — Close**
 “So it’s not a chatbot that tells you you did great. It shows you the missing detail, lets
-you fix it, and shows you that you fixed it. I built it solo this weekend. This demo is
+you fix it, and shows you that you fixed it. I built it solo for WhitHack. This demo is
 running live on Gemini.”
 (If you are showing the recording or local mode, say that instead. See demo.md.)
+
+## If the time limit is 3 or 5 minutes
+
+The two-minute script is the core. Add blocks, don’t stretch sentences.
+
+**3 minutes** (two-minute script plus about 60 seconds):
+- After the weak-answer feedback, click **Answer the follow-up**, then **Use example text**
+  and **Reflect my answer**: “When I answer the follow-up, it re-reads both parts together.”
+  Then continue with **Try the original again** as usual. (+30 s, one extra Gemini call)
+- In the technical part, add: “Each response says which model actually answered, so I can
+  tell a fallback from the primary model. No database: the session lives in the browser tab,
+  which is better for privacy.” (+15 s)
+- Close with the takeaways screen and **Download report**. (+15 s)
+
+**5 minutes** (three-minute version plus about two minutes):
+- **Voice (+40 s, only if the microphone check passed that morning):** on a question screen
+  click **Speak your answer**, say one sentence, **Stop**, show the editable transcript:
+  “Speech goes to Gemini for transcription, and I can fix any word before submitting.”
+- **Honesty guard (+40 s):** after the comparison, click **Next question**, type
+  “I chose SQLite because setup was simple, and the app was used by 5,000 students in the
+  first week.” and submit: “That number isn’t in my
+  resume. It doesn’t praise it and doesn’t call it false. It says an interviewer will ask
+  how I measured it, and plain code caps that result at ‘needs a closer look’.” (Ratings
+  vary, so describe what appears.)
+- **Tradeoffs (+30 s):** no accounts or database, local-only server, model variance, and
+  voice tested only with a simulated microphone (see “Honest tradeoffs” below).
+- Leave 10–20 s for questions.
 
 ## 30-second emergency pitch
 
