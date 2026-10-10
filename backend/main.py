@@ -13,7 +13,7 @@ from typing import Literal
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
@@ -21,6 +21,12 @@ ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / '.env')
 app = FastAPI(title='InterviewMirror', version='0.1.0')
 log = logging.getLogger('interviewmirror')
+if not log.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter('%(levelname)s:     %(message)s'))
+    log.addHandler(_handler)
+    log.setLevel(logging.INFO)
+    log.propagate = False
 DEFAULT_MODEL = 'gemini-3.5-flash-lite'
 DEFAULT_FALLBACK = 'gemini-flash-lite-latest'
 ATTEMPT_TIMEOUT = 28
@@ -193,7 +199,8 @@ async def call_model(client: httpx.AsyncClient, model: str, key: str, payload: d
 
 async def generate(schema: type[BaseModel], instruction: str, data: dict | None = None,
                    audio_part: dict | None = None, check=None,
-                   invalid_message: str = 'The AI returned an unusable response. Your input is kept; try again.') -> BaseModel:
+                   invalid_message: str = 'The AI returned an unusable response. Your input is kept; try again.',
+                   response: Response | None = None) -> BaseModel:
     """Try the primary model, then the fallback, then the primary again while time allows.
 
     Retries happen when an attempt is busy, rate-limited, slow, or fails the evidence checks.
@@ -225,8 +232,14 @@ async def generate(schema: type[BaseModel], instruction: str, data: dict | None 
                     break
                 await asyncio.sleep(RETRY_BACKOFF)
             try:
+                attempt_started = monotonic()
                 result = schema.model_validate_json(await call_model(client, model, key, payload))
-                return check(result) if check else result
+                result = check(result) if check else result
+                log.info('Gemini %s answered by %s in %.1fs (attempt %d).', schema.__name__, model,
+                         monotonic() - attempt_started, attempt + 1)
+                if response is not None:
+                    response.headers['X-InterviewMirror-Model'] = model
+                return result
             except HTTPException:
                 raise
             except RetryableError as error:
@@ -250,7 +263,7 @@ def health():
 
 
 @app.post('/api/plan', response_model=Plan)
-async def plan(context: Context):
+async def plan(context: Context, response: Response):
     return await generate(Plan, """Generate exactly 3 interview questions for a student practicing for this role.
 Each question connects one resume excerpt to one job requirement excerpt. Copy both excerpts
 character-for-character from INPUT_JSON: one sentence or clear phrase, at most 200 characters.
@@ -266,11 +279,12 @@ No invented company-specific interview process.
 topic: 2 to 4 words. why: one sentence addressed to the student as "you", naming the role
 requirement this practices.
 """, context.model_dump(), check=lambda result: validate_plan(result, context),
-                          invalid_message='The AI question contained an unsupported source excerpt. Try again.')
+                          invalid_message='The AI question contained an unsupported source excerpt. Try again.',
+                          response=response)
 
 
 @app.post('/api/assess', response_model=Assessment)
-async def assess(turn: Turn):
+async def assess(turn: Turn, response: Response):
     if not turn.answer.strip():
         raise HTTPException(422, 'Write an answer before requesting feedback.')
     return await generate(Assessment, """Evaluate the supplied answer to the original question as a supportive interview coach.
@@ -320,11 +334,12 @@ summary: one or two sentences, second person, naming the strongest part and the 
 It must agree with the levels above; if all four are clear, name the depth to explore instead.
 Practice feedback only, never a hiring prediction, and never a judgment of truthfulness.
 """, turn.model_dump(), check=lambda result: validate_assessment(result, turn.answer, turn.resume),
-                          invalid_message='The AI feedback did not pass evidence checks. Your answer is kept; try again.')
+                          invalid_message='The AI feedback did not pass evidence checks. Your answer is kept; try again.',
+                          response=response)
 
 
 @app.post('/api/transcribe', response_model=Transcript)
-async def transcribe(file: UploadFile, context: str = Form('', max_length=8000)):
+async def transcribe(response: Response, file: UploadFile, context: str = Form('', max_length=8000)):
     mime = (file.content_type or '').split(';')[0]
     if mime not in {'audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'video/webm'}:
         raise HTTPException(415, 'Use a supported audio recording format.')
@@ -342,7 +357,7 @@ async def transcribe(file: UploadFile, context: str = Form('', max_length=8000))
         instruction += ('\nSPELLING_CONTEXT is the interview question and the speaker\'s notes. Use it only to spell names '
                         'and technical terms that are actually spoken. Never add words that are not spoken.')
     return await generate(Transcript, instruction, {'SPELLING_CONTEXT': context} if context.strip() else None,
-                          audio_part={'inlineData': {'mimeType': normalized_mime,
+                          response=response, audio_part={'inlineData': {'mimeType': normalized_mime,
                                                      'data': base64.b64encode(content).decode('ascii')}})
 
 

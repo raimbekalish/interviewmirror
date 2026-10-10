@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import itertools
 import json
 
 import httpx
@@ -257,9 +258,15 @@ def test_both_models_busy_then_primary_recovers(monkeypatch):
 
 
 def test_no_third_attempt_after_two_timeouts(monkeypatch):
-    clock = iter([0, 60])
+    clock = itertools.chain([0, 0, 0], itertools.repeat(60))  # start, attempt 1, attempt 2, then 60 s later
     monkeypatch.setattr(main,'monotonic',lambda: next(clock))
     calls = fake_provider(monkeypatch,[httpx.ReadTimeout('slow'),httpx.ReadTimeout('slow')])
     response = client.post('/api/plan',json={'resume':RESUME,'job':JOB})
     assert response.status_code == 504
     assert len(calls) == 2
+
+
+def test_response_names_the_model_that_actually_answered(monkeypatch):
+    fake_provider(monkeypatch,[httpx.Response(503,json={}),gemini(ASSESSMENT)])
+    response = client.post('/api/assess',json={'resume':RESUME,'job':JOB,'question':QUESTION,'answer':ANSWER})
+    assert response.headers['X-InterviewMirror-Model'] == main.DEFAULT_FALLBACK
