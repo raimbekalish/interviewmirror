@@ -208,6 +208,6 @@ microphones, or provider behavior.
 
 ## Acknowledgments
 
-Built by a solo participant, Raimbek Alish, during WhitHack 2026, with AI-assisted
+Built by Raimbek Alish, during WhitHack 2026, with AI-assisted
 implementation. React, Vite, FastAPI, Pydantic, HTTPX, and Lucide are third-party
 dependencies; fonts are DM Sans and Instrument Serif from Google Fonts.
