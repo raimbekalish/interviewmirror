@@ -127,3 +127,53 @@ test('blocked microphone gives a recoverable message and keeps the typed draft',
   assert.equal(view.getByRole('button',{name:/Speak your answer/i}).disabled,false);
   delete window.MediaRecorder;
 });
+
+test('comparison summarizes improvements from real levels and repeated retries still compare with the first attempt',async()=>{
+  const view=await startLocal();
+  fireEvent.change(view.getByLabelText('Your answer'),{target:{value:sampleFirst}});
+  fireEvent.click(view.getByRole('button',{name:/Reflect my answer/i}));
+  await waitFor(()=>view.getByText('EXPLAINED CLEARLY'));
+  assert.ok(view.getByText('NEEDS MORE DETAIL'));
+  fireEvent.click(view.getByRole('button',{name:/Try the original again/i}));
+  fireEvent.change(view.getByLabelText('Your answer'),{target:{value:sampleRetry}});
+  fireEvent.click(view.getByRole('button',{name:/Reflect my answer/i}));
+  await waitFor(()=>view.getByText('See what changed.'));
+  const improved=document.querySelector('.change-summary .improved p').textContent;
+  assert.match(improved,/Your contribution/);assert.match(improved,/Decision & reasoning/);assert.match(improved,/Result or learning/);
+  assert.ok(view.getByRole('button',{name:/Next question/i}).className.includes('primary'));
+  fireEvent.click(view.getByRole('button',{name:/Retry once more/i}));
+  fireEvent.change(view.getByLabelText('Your answer'),{target:{value:sampleFirst+' I wrote the tests.'}});
+  fireEvent.click(view.getByRole('button',{name:/Reflect my answer/i}));
+  await waitFor(()=>view.getByText(/RETRY 2\./));
+  assert.ok(document.querySelector('.comparison-grid article').textContent.includes(sampleFirst),'before stays the first attempt');
+  assert.ok(document.querySelector('.comparison-grid article.after').textContent.includes('I wrote the tests.'),'after is the latest retry');
+});
+
+test('leaving with answers in progress triggers the browser leave warning',async()=>{
+  const view=await startLocal();
+  const before=new window.Event('beforeunload',{cancelable:true});window.dispatchEvent(before);
+  assert.equal(before.defaultPrevented,false,'no warning before any answer');
+  fireEvent.change(view.getByLabelText('Your answer'),{target:{value:sampleFirst}});
+  fireEvent.click(view.getByRole('button',{name:/Reflect my answer/i}));
+  await waitFor(()=>view.getByText('EXPLAINED CLEARLY'));
+  const after=new window.Event('beforeunload',{cancelable:true});window.dispatchEvent(after);
+  assert.equal(after.defaultPrevented,true);
+});
+
+test('validation errors from the API become a readable message and keep the answer',async()=>{
+  globalThis.fetch=async(path)=>{
+    if(path==='/api/health')return {ok:true,json:async()=>({ai_available:true})};
+    if(path==='/api/plan')return {ok:true,json:async()=>localPlan(sampleResume,sampleJob)};
+    return {ok:false,status:422,json:async()=>({detail:[{loc:['body','answer'],msg:'String should have at most 10000 characters'}]})};
+  };
+  const view=render(React.createElement(App));
+  await waitFor(()=>view.getByText('Gemini mode'));
+  fireEvent.click(view.getByRole('button',{name:/Load an example/i}));
+  fireEvent.click(view.getByRole('button',{name:/Start practicing/i}));
+  await waitFor(()=>view.getByLabelText('Your answer'));
+  fireEvent.change(view.getByLabelText('Your answer'),{target:{value:sampleFirst}});
+  fireEvent.click(view.getByRole('button',{name:/Reflect my answer/i}));
+  await waitFor(()=>view.getByRole('alert'));
+  assert.match(view.getByRole('alert').textContent,/limited to 10,000 characters/);
+  assert.equal(view.getByLabelText('Your answer').value,sampleFirst);
+});

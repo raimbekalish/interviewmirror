@@ -10,7 +10,7 @@ export async function request<T>(path:string, body?:unknown, form?:FormData):Pro
       body:form || (body ? JSON.stringify(body) : undefined)});
     let data;
     try { data = await response.json(); } catch { throw new Error('The AI server is not available here. Run the local FastAPI server, or choose Local practice.'); }
-    if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Please check your inputs and try again.');
+    if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : response.status === 422 ? 'Please check your inputs: answers are limited to 10,000 characters, resumes to 30,000, and job descriptions to 20,000.' : 'Please check your inputs and try again.');
     return data;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw new Error('The request timed out. Your input is kept; try again.');
